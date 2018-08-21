@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">FireBackupLib</string>
+    <string name="aguarde">Aguarde</string>
+    <string name="fazendo_backup">Fazendo backup ...</string>
+    <string name="warning">Atenção</string>
+    <string name="restaurando_backup">Restaurando backup</string>
+    <string name="msg_nenhum_backup_encontrado">Nenhum arquivo de backup encontrado!</string>
+    <string name="msg_arquivo_prefs_not_found">Arquivo de preferências não encontrado!</string>
+    <string name="msg_arquivo_db_not_found">Arquivo de banco de dados não encontrado!</string>
+    <string name="selecione_o_backup">Selecione o backup</string>
+    <string name="cancelar">Cancelar</string>
+</resources>
