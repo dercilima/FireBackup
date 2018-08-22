@@ -32,6 +32,7 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
 
     public interface OnRestoreCompleteListener {
         void onRestoreSucess();
+
         void onRestoreError(Exception e);
     }
 

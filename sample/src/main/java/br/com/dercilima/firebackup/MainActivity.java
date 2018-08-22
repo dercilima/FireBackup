@@ -1,5 +1,6 @@
 package br.com.dercilima.firebackup;
 
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.support.v7.app.AlertDialog;
@@ -39,9 +40,11 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
                 new BackupTask(this)
                         .setCallback(this)
                         .setBackupDirectory(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
-                        .setBackupName("MeuBackup")
+//                        .setBackupName("MeuBackup")
                         .addDatabaseName(DbHelper.DATABASE_NAME)
                         .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
+                        .setUploadToStorage(true, "/bktop/")
+                        .setDeleteBackupAfterUpload(true)
                         .execute((Void) null);
 
                 break;
@@ -63,13 +66,18 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
     }
 
     @Override
-    public void onBackupSuccess(File backupUrl) {
-        showMessage("Backup efetuado com sucesso! " + backupUrl);
+    public void onBackupSuccess(File backupFile) {
+        showMessage("Backup efetuado com sucesso!\n\n" + backupFile);
+    }
+
+    @Override
+    public void onUploadSucess(Uri backupUrl) {
+        showMessage("Backup e Upload realizados com sucesso!\n\n" + backupUrl);
     }
 
     @Override
     public void onBackupError(Exception error) {
-        showMessage("Erro no backup! " + error);
+        showMessage("Erro no backup!\n\n" + error);
     }
 
     @Override
@@ -79,7 +87,7 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
 
     @Override
     public void onRestoreError(Exception e) {
-        showMessage("Erro no restore! " + e);
+        showMessage("Erro no restore!\n\n" + e);
     }
 
     private void showMessage(String message) {

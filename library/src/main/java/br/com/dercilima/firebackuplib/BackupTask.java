@@ -2,9 +2,18 @@ package br.com.dercilima.firebackuplib;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.util.Log;
+
+import com.google.android.gms.tasks.Continuation;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -24,8 +33,25 @@ import br.com.dercilima.zipfileslib.ZipFiles;
 public class BackupTask extends AsyncTask<Void, Exception, File> {
 
     public interface Callback {
-        void onBackupSuccess(File backupUrl);
+        /**
+         * Quando finaliza o backup com sucesso
+         *
+         * @param backupFile Arquivo de backup local
+         */
+        void onBackupSuccess(File backupFile);
 
+        /**
+         * Quando finaliza o Upload com sucesso (caso tenha sido configurado o upload do backup)
+         *
+         * @param backupUrl Url do Storage do Firebase
+         */
+        void onUploadSucess(Uri backupUrl);
+
+        /**
+         * Quando ocorre um erro em algum momento do backup ou do upload (se for o caso)
+         *
+         * @param error Erro ocorrido
+         */
         void onBackupError(Exception error);
     }
 
@@ -43,6 +69,16 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
 
     // Bancos de dados para backup
     private final List<String> dbList = new ArrayList<>();
+
+    // Indica se faz upload do backup para o Firebase Storage
+    private boolean uploadToStorage = false;
+
+    // Indica o caminho onde o arquivo será armazenado no Firebase Storage
+    private String uploadPath;
+
+    // Indica se exclui o arquivo após upload para o Storage
+    private boolean deleteBackupAfterUpload = false;
+
 
     public BackupTask(Context context) {
         this.context = new WeakReference<>(context);
@@ -218,9 +254,53 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
     @Override
     protected void onPostExecute(File result) {
         super.onPostExecute(result);
-        if (result != null) {
+        if (!isDeleteBackupAfterUpload()) {
             mCallback.onBackupSuccess(result);
         }
+        if (isUploadToStorage()) {
+            uploadBackup(result);
+        }
+    }
+
+    private void uploadBackup(final File backup) {
+
+        // Obter uma referência do storage do firebase
+        final StorageReference backupRef = FirebaseStorage.getInstance()
+                // Obter uma referência do Storage
+                .getReference()
+                // Indicar o caminho onde será armazenado o arquivo de backup
+                .child(getUploadPath() != null ? getUploadPath() : "")
+                // Nome do arquivo
+                .child(backup.getName());
+
+        // Adicionar um timeout de 5 segundos
+        backupRef.getStorage().setMaxUploadRetryTimeMillis(5000);
+
+        // Fazer o backup
+        backupRef.putFile(Uri.fromFile(backup))
+                .continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+                    @Override
+                    public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                        if (!task.isSuccessful() && task.getException() != null) {
+                            throw task.getException();
+                        }
+                        return backupRef.getDownloadUrl();
+                    }
+                })
+                .addOnCompleteListener(new OnCompleteListener<Uri>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Uri> task) {
+                        if (isDeleteBackupAfterUpload()) {
+                            deleteBackupsLocal();
+                        }
+                        if (task.isSuccessful()) {
+                            mCallback.onUploadSucess(task.getResult());
+                        } else {
+                            mCallback.onBackupError(task.getException());
+                        }
+                    }
+                });
+
     }
 
     private Context getContext() {
@@ -229,8 +309,8 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
 
     /**
      * Adiciona o nome do banco de dados para backup. Pode adicionar vários bancos de dados.
-     * @param databaseName
-     * @return
+     *
+     * @param databaseName Nome do banco de dados para backup
      */
     public BackupTask addDatabaseName(String databaseName) {
         dbList.add(databaseName);
@@ -243,9 +323,9 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
 
     /**
      * Adiciona o nome do arquivo de preferências para backup. Pode adicionar vários arquivos.
-     * @param name
-     * @param prefs
-     * @return
+     *
+     * @param name  Nome do arquivo de preferências
+     * @param prefs SharedPreferences que gerencia a preferência cujo nome foi informado
      */
     public BackupTask addPreferences(String name, SharedPreferences prefs) {
         this.preferencesList.put(name, prefs);
@@ -262,10 +342,10 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
     }
 
     /**
-     * Diretório onde serão salvo os backups. Caso não seja informado, o
+     * Informa o diretório onde serão armazenado os backups. Caso não seja informado, o
      * caminho padrão é o diretório "Backups" na raiz do ExternalStorage
-     * @param backupDirectory
-     * @return
+     *
+     * @param backupDirectory Diretório onde serão armazenado os backups
      */
     public BackupTask setBackupDirectory(File backupDirectory) {
         this.backupDirectory = backupDirectory;
@@ -273,9 +353,9 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
     }
 
     /**
-     * Nome do arquivo de backup. Não é necessário adicionar a extensão do arquivo, ex: .zip ou .rar
-     * @param backupName
-     * @return
+     * Informa o nome do arquivo de backup. Não é necessário adicionar a extensão do arquivo, ex: .zip ou .rar
+     *
+     * @param backupName Nome do arquivo de backup
      */
     public BackupTask setBackupName(String backupName) {
         this.backupName = backupName;
@@ -288,20 +368,58 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         }
         if (!backupDirectory.exists()) {
             if (backupDirectory.mkdirs()) {
-                Log.d(getClass().getSimpleName(), "Directory \"" + backupDirectory.toString() + "\" created!");
+                Log.d(getClass().getSimpleName(), "Directory \"" + backupDirectory + "\" created!");
             }
         }
         return backupDirectory;
     }
 
-    private void deleteBackupsLocal() {
+    private boolean isUploadToStorage() {
+        return uploadToStorage;
+    }
 
+    private String getUploadPath() {
+        return uploadPath;
+    }
+
+    /**
+     * Indica que após realizado o backup, será feito o upload para o Storage do Firebase
+     * E, indica o caminho onde o arquivo será armazenado no Firebase Storage.
+     * Ex.: nome_da_empresa/codigo_do_vendedor/ ...
+     *
+     * @param uploadToStorage Flag indicativa
+     * @param uploadPath Caminho onde o arquivo será armazenado no Firebase Storage
+     */
+    public BackupTask setUploadToStorage(boolean uploadToStorage, String uploadPath) {
+        this.uploadToStorage = uploadToStorage;
+        this.uploadPath = uploadPath;
+        return this;
+    }
+
+    private boolean isDeleteBackupAfterUpload() {
+        return deleteBackupAfterUpload;
+    }
+
+    /**
+     * Indica que após upload do backup, o arquivo será excluído.
+     * Se deleteBackupAfterUpload == true, o método "onBackupSuccess" do callback não será chamado.
+     *
+     * @param deleteBackupAfterUpload Flag indicativa
+     */
+    public BackupTask setDeleteBackupAfterUpload(boolean deleteBackupAfterUpload) {
+        this.deleteBackupAfterUpload = deleteBackupAfterUpload;
+        return this;
+    }
+
+    /**
+     * Excluí todos os arquivos de backup dentro do diretório de backup informado
+     */
+    private void deleteBackupsLocal() {
         for (File backup : getBackupDirectory().listFiles()) {
             if (backup.delete()) {
                 Log.d(getContext().getString(R.string.app_name), " Arquivo de backup \"" + backup.getName() + "\" excluído!");
             }
         }
-
     }
 
 }
