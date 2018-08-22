@@ -18,9 +18,12 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import br.com.dercilima.firebackuplib.utils.FileUtil;
 import br.com.dercilima.zipfileslib.ZipFiles;
@@ -39,14 +42,11 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
     // Diretório onde buscará os backups para fazer o restore
     private File restoreDir;
 
-    // Nome do arquivo de preferências
-    private String preferencesName;
-
-    // Arquivo de preferências onde será restaurado
-    private SharedPreferences preferences;
+    // Map de preferências. Pode-se ter n arquivos de preferências para restaurar
+    private final Map<String, SharedPreferences> preferencesMap = new HashMap<>();
 
     // Nome do arquivo de banco de dados
-    private String databaseName;
+    private final Set<String> dbList = new HashSet<>();
 
     public RestoreBackupTask(Context context) {
         this.context = new WeakReference<>(context);
@@ -181,27 +181,31 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
 
     private void copyPreferences() throws IOException {
 
-        if (getPreferences() == null || getPreferencesName() == null) {
+        if (getPreferencesMap().isEmpty()) {
             return;
         }
 
-        final File filePrefs = new File(getTempDir(), getPreferencesName() + ".xml");
+        for (String preferencesName : getPreferencesMap().keySet()) {
 
-        if (!filePrefs.exists()) {
-            throw new FileNotFoundException(context.get().getString(R.string.msg_arquivo_prefs_not_found));
+            final File filePrefs = new File(getTempDir(), preferencesName + ".xml");
 
-        } else {
+            if (!filePrefs.exists()) {
+                throw new FileNotFoundException(context.get().getString(R.string.msg_arquivo_prefs_not_found));
 
-            // O restore do arquivo de configuração não é feito por meio de copia de arquivo.
-            // O arquivo é exportado em forma de key/value e importado da mesma forma.
-            loadSharedPreferencesFromFile(filePrefs);
+            } else {
+
+                // O restore do arquivo de configuração não é feito por meio de copia de arquivo.
+                // O arquivo é exportado em forma de key/value e importado da mesma forma.
+                loadSharedPreferencesFromFile(filePrefs, getPreferencesMap().get(preferencesName));
+
+            }
 
         }
 
     }
 
     @SuppressWarnings("unchecked")
-    private void loadSharedPreferencesFromFile(File filePrefs) {
+    private void loadSharedPreferencesFromFile(File filePrefs, SharedPreferences preferences) {
 
         ObjectInputStream input = null;
 
@@ -213,14 +217,14 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
             //Preferencias prefs = new Preferencias(context.get());
 
             // Limpar o arquivo de preferências, caso tenha alguma preferência salva, será apagada
-            getPreferences().edit().clear().apply();
+            preferences.edit().clear().apply();
 
             // Ler as chaves e valores do arquivo de preferência que foi feito o backup
             Map<String, ?> entries = (Map<String, ?>) input.readObject();
 
             for (Entry<String, ?> entry : entries.entrySet()) {
                 // Salvar a preferência
-                set(entry.getKey(), entry.getValue());
+                set(preferences, entry.getKey(), entry.getValue());
             }
 
         } catch (IOException | ClassNotFoundException e) {
@@ -236,30 +240,34 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
         }
     }
 
-    private void set(String key, Object value) {
+    private void set(SharedPreferences preferences, String key, Object value) {
         if (value instanceof Boolean)
-            getPreferences().edit().putBoolean(key, (Boolean) value).apply();
+            preferences.edit().putBoolean(key, (Boolean) value).apply();
         else if (value instanceof Float)
-            getPreferences().edit().putFloat(key, (Float) value).apply();
+            preferences.edit().putFloat(key, (Float) value).apply();
         else if (value instanceof Integer)
-            getPreferences().edit().putInt(key, (Integer) value).apply();
+            preferences.edit().putInt(key, (Integer) value).apply();
         else if (value instanceof Long)
-            getPreferences().edit().putLong(key, (Long) value).apply();
+            preferences.edit().putLong(key, (Long) value).apply();
         else if (value instanceof String)
-            getPreferences().edit().putString(key, ((String) value)).apply();
+            preferences.edit().putString(key, ((String) value)).apply();
     }
 
     private void copyDatabase() throws IOException {
 
-        if (getDatabaseName() != null) {
+        if (!getDbList().isEmpty()) {
 
-            final File fileDatabase = new File(getTempDir(), getDatabaseName());
+            for (String databaseName : getDbList()) {
 
-            if (!fileDatabase.exists()) {
-                throw new FileNotFoundException(context.get().getString(R.string.msg_arquivo_db_not_found));
+                final File fileDatabase = new File(getTempDir(), databaseName);
+
+                if (!fileDatabase.exists()) {
+                    throw new FileNotFoundException(context.get().getString(R.string.msg_arquivo_db_not_found));
+                }
+
+                copyDatabase(fileDatabase);
+
             }
-
-            copyDatabase(fileDatabase);
 
         } else {
 
@@ -340,25 +348,28 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
 
     }
 
+    // Reinicia a task passando todos os dados da task atual + o file para descompactar
     private void restartTask(File file) {
-        new RestoreBackupTask(context.get())
-                .setCallback(mCallback)
-                .setRestoreDir(restoreDir)
-                .setPreferences(getPreferencesName(), getPreferences())
-                .setDatabaseName(getDatabaseName())
-                .execute(file);
-    }
-
-    private void dismissDialog() {
-        if (dialog != null) {
-            dialog.dismiss();
-            dialog = null;
+        final RestoreBackupTask task = new RestoreBackupTask(context.get());
+        task.setCallback(mCallback);
+        task.setRestoreDir(restoreDir);
+        for (String preferencesName : getPreferencesMap().keySet()) {
+            task.addPreferences(preferencesName, getPreferencesMap().get(preferencesName));
         }
+        for (String databaseName : getDbList()) {
+            task.addDatabaseName(databaseName);
+        }
+        task.execute(file);
     }
 
+    // Fecha o ProgressDialog
     @Override
     protected void onCancelled() {
         super.onCancelled();
+        dismissDialog();
+    }
+
+    private void dismissDialog() {
         if (dialog != null) {
             dialog.dismiss();
             dialog = null;
@@ -379,6 +390,7 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
 
     /**
      * Diretório para procurar os arquivos de backup
+     *
      * @param restoreDir
      */
     public RestoreBackupTask setRestoreDir(File restoreDir) {
@@ -390,36 +402,34 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
         return this;
     }
 
-    private String getPreferencesName() {
-        return preferencesName;
-    }
-
-    private SharedPreferences getPreferences() {
-        return preferences;
+    private Map<String, SharedPreferences> getPreferencesMap() {
+        return this.preferencesMap;
     }
 
     /**
-     * Define o nome do arquivo de preferências e uma instancia da classe que gerencia essas preferências
+     * Adiciona o nome do arquivo de preferências e uma instancia da classe
+     * que gerencia essas preferências. Pode-se ter vários arquivos.
+     *
      * @param preferencesName
      * @param preferences
      */
-    public RestoreBackupTask setPreferences(String preferencesName, SharedPreferences preferences) {
-        this.preferencesName = preferencesName;
-        this.preferences = preferences;
+    public RestoreBackupTask addPreferences(String preferencesName, SharedPreferences preferences) {
+        this.preferencesMap.put(preferencesName, preferences);
         return this;
     }
 
-    private String getDatabaseName() {
-        return databaseName;
+    private Set<String> getDbList() {
+        return dbList;
     }
 
     /**
      * Nome do banco de dados dentro do backup
+     *
      * @param databaseName
-     * @return
      */
-    public RestoreBackupTask setDatabaseName(String databaseName) {
-        this.databaseName = databaseName;
+    public RestoreBackupTask addDatabaseName(String databaseName) {
+        this.dbList.add(databaseName);
         return this;
     }
+
 }

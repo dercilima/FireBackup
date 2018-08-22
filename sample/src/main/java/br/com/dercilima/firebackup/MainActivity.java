@@ -51,8 +51,8 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
                 new RestoreBackupTask(this)
                         .setCallback(this)
                         .setRestoreDir(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
-                        .setDatabaseName(DbHelper.DATABASE_NAME)
-                        .setPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
+                        .addDatabaseName(DbHelper.DATABASE_NAME)
+                        .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
                         .execute();
 
                 break;
