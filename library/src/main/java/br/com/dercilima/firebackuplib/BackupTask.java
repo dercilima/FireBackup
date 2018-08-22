@@ -227,6 +227,11 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return context.get();
     }
 
+    /**
+     * Adiciona o nome do banco de dados para backup. Pode adicionar vários bancos de dados.
+     * @param databaseName
+     * @return
+     */
     public BackupTask addDatabaseName(String databaseName) {
         dbList.add(databaseName);
         return this;
@@ -236,6 +241,12 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return dbList;
     }
 
+    /**
+     * Adiciona o nome do arquivo de preferências para backup. Pode adicionar vários arquivos.
+     * @param name
+     * @param prefs
+     * @return
+     */
     public BackupTask addPreferences(String name, SharedPreferences prefs) {
         this.preferencesList.put(name, prefs);
         return this;
@@ -250,11 +261,22 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return this;
     }
 
+    /**
+     * Diretório onde serão salvo os backups. Caso não seja informado, o
+     * caminho padrão é o diretório "Backups" na raiz do ExternalStorage
+     * @param backupDirectory
+     * @return
+     */
     public BackupTask setBackupDirectory(File backupDirectory) {
         this.backupDirectory = backupDirectory;
         return this;
     }
 
+    /**
+     * Nome do arquivo de backup. Não é necessário adicionar a extensão do arquivo, ex: .zip ou .rar
+     * @param backupName
+     * @return
+     */
     public BackupTask setBackupName(String backupName) {
         this.backupName = backupName;
         return this;

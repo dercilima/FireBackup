@@ -377,6 +377,10 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
         return restoreDir;
     }
 
+    /**
+     * Diretório para procurar os arquivos de backup
+     * @param restoreDir
+     */
     public RestoreBackupTask setRestoreDir(File restoreDir) {
         if (restoreDir != null && restoreDir.isDirectory()) {
             this.restoreDir = restoreDir;
@@ -394,6 +398,11 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
         return preferences;
     }
 
+    /**
+     * Define o nome do arquivo de preferências e uma instancia da classe que gerencia essas preferências
+     * @param preferencesName
+     * @param preferences
+     */
     public RestoreBackupTask setPreferences(String preferencesName, SharedPreferences preferences) {
         this.preferencesName = preferencesName;
         this.preferences = preferences;
@@ -404,6 +413,11 @@ public class RestoreBackupTask extends AsyncTask<File, Exception, List<File>> {
         return databaseName;
     }
 
+    /**
+     * Nome do banco de dados dentro do backup
+     * @param databaseName
+     * @return
+     */
     public RestoreBackupTask setDatabaseName(String databaseName) {
         this.databaseName = databaseName;
         return this;
