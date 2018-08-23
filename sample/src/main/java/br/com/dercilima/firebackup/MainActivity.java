@@ -45,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
                         .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
                         .setUploadToStorage(true, "/bktop/")
                         .setDeleteBackupAfterUpload(true)
+                        .setShortenUrlWithDynamicLink(true, "firebackup.page.link")
                         .execute((Void) null);
 
                 break;

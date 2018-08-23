@@ -11,6 +11,8 @@ import android.util.Log;
 import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
+import com.google.firebase.dynamiclinks.ShortDynamicLink;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
@@ -75,6 +77,12 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
 
     // Indica o caminho onde o arquivo será armazenado no Firebase Storage
     private String uploadPath;
+
+    // Indica que está configurado para encurtar a Url com o Dynamic Link
+    private boolean shortenUrlWithDynamicLink;
+
+    // Domínio configurado em Dynamic Links do Firebase para encurtar a Url
+    private String dynamicLinkDomain;
 
     // Indica se exclui o arquivo após upload para o Storage
     private boolean deleteBackupAfterUpload = false;
@@ -277,7 +285,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         backupRef.getStorage().setMaxUploadRetryTimeMillis(5000);
 
         // Fazer o backup
-        backupRef.putFile(Uri.fromFile(backup))
+        Task<Uri> task = backupRef.putFile(Uri.fromFile(backup))
                 .continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
                     @Override
                     public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
@@ -286,20 +294,46 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
                         }
                         return backupRef.getDownloadUrl();
                     }
-                })
-                .addOnCompleteListener(new OnCompleteListener<Uri>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Uri> task) {
-                        if (isDeleteBackupAfterUpload()) {
-                            deleteBackupsLocal();
-                        }
-                        if (task.isSuccessful()) {
-                            mCallback.onUploadSucess(task.getResult());
-                        } else {
-                            mCallback.onBackupError(task.getException());
-                        }
-                    }
                 });
+
+        // Verificar se está configurado para encurtar a url
+        if (isShortenUrlWithDynamicLink()) {
+            task = task.continueWithTask(new Continuation<Uri, Task<ShortDynamicLink>>() {
+                @Override
+                public Task<ShortDynamicLink> then(@NonNull Task<Uri> task) throws Exception {
+                    if (!task.isSuccessful() && task.getException() != null) {
+                        throw task.getException();
+                    }
+                    return FirebaseDynamicLinks.getInstance().createDynamicLink()
+                            .setLink(task.getResult())
+                            .setDynamicLinkDomain(getDynamicLinkDomain())
+                            .buildShortDynamicLink(ShortDynamicLink.Suffix.SHORT);
+                }
+            })
+            .continueWith(new Continuation<ShortDynamicLink, Uri>() {
+                @Override
+                public Uri then(@NonNull Task<ShortDynamicLink> task) throws Exception {
+                    if (!task.isSuccessful() && task.getException() != null) {
+                        throw task.getException();
+                    }
+                    return task.getResult().getShortLink();
+                }
+            });
+        }
+
+        task.addOnCompleteListener(new OnCompleteListener<Uri>() {
+            @Override
+            public void onComplete(@NonNull Task<Uri> task) {
+                if (isDeleteBackupAfterUpload()) {
+                    deleteBackupsLocal();
+                }
+                if (task.isSuccessful()) {
+                    mCallback.onUploadSucess(task.getResult());
+                } else {
+                    mCallback.onBackupError(task.getException());
+                }
+            }
+        });
 
     }
 
@@ -386,6 +420,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
      * Indica que após realizado o backup, será feito o upload para o Storage do Firebase
      * E, indica o caminho onde o arquivo será armazenado no Firebase Storage.
      * Ex.: nome_da_empresa/codigo_do_vendedor/ ...
+     * Lembrando que é necessário ter configurado as permissões no Storage do Firebase.
      *
      * @param uploadToStorage Flag indicativa
      * @param uploadPath Caminho onde o arquivo será armazenado no Firebase Storage
@@ -408,6 +443,26 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
      */
     public BackupTask setDeleteBackupAfterUpload(boolean deleteBackupAfterUpload) {
         this.deleteBackupAfterUpload = deleteBackupAfterUpload;
+        return this;
+    }
+
+    private boolean isShortenUrlWithDynamicLink() {
+        return shortenUrlWithDynamicLink;
+    }
+
+    private String getDynamicLinkDomain() {
+        return dynamicLinkDomain;
+    }
+
+    /**
+     * Indica que após upload, a url será encurtada com o Firebase Dynamic Link.
+     * Lembrando que é preciso configurar o Dynamic Link no Console do Firebase.
+     *
+     * @param shortenUrlWithDynamicLink Encurta a Url?
+     */
+    public BackupTask setShortenUrlWithDynamicLink(boolean shortenUrlWithDynamicLink, String dynamicLinkDomain) {
+        this.shortenUrlWithDynamicLink = shortenUrlWithDynamicLink;
+        this.dynamicLinkDomain = dynamicLinkDomain;
         return this;
     }
 

@@ -1,15 +1,14 @@
 apply plugin: 'com.android.library'
+apply from: 'maven-push.gradle'
 
 android {
     compileSdkVersion 27
-
-
 
     defaultConfig {
         minSdkVersion 14
         targetSdkVersion 27
         versionCode 1
-        versionName "1.0"
+        versionName "0.0.1"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
 
@@ -34,4 +33,5 @@ dependencies {
     implementation 'com.github.dercilima:zipfiles:0.0.1'
     compileOnly("com.google.firebase:firebase-core:16.0.1")
     compileOnly("com.google.firebase:firebase-storage:16.0.1")
+    compileOnly("com.google.firebase:firebase-dynamic-links:16.0.1")
 }
