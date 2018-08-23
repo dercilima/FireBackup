@@ -31,7 +31,15 @@ dependencies {
         // Exclude the "plain java" json module to fix build warnings.
         exclude group: 'org.json', module: 'json'
     }
+
+    // Firebase Storage (usado para fazer o upload do backup)
     implementation('com.google.firebase:firebase-storage:16.0.1') {
+        // Exclude the "plain java" json module to fix build warnings.
+        exclude group: 'org.json', module: 'json'
+    }
+
+    // Dynamic Links (usado para encurtar uma url)
+    implementation ('com.google.firebase:firebase-dynamic-links:16.0.1') {
         // Exclude the "plain java" json module to fix build warnings.
         exclude group: 'org.json', module: 'json'
     }
