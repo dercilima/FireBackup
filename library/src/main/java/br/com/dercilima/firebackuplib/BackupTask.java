@@ -252,7 +252,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     protected void onProgressUpdate(Exception... values) {
         super.onProgressUpdate(values);
         if (values != null && values.length > 0) {
-            mCallback.onBackupError(values[0]);
+            onBackupError(values[0]);
         }
     }
 
@@ -260,7 +260,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     protected void onPostExecute(File result) {
         super.onPostExecute(result);
         if (!isDeleteBackupAfterUpload()) {
-            mCallback.onBackupSuccess(result);
+            onBackupSuccess(result);
         }
         if (isUploadToStorage()) {
             uploadBackup(result);
@@ -319,9 +319,9 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
                     deleteBackupsLocal();
                 }
                 if (task.isSuccessful()) {
-                    mCallback.onUploadSucess(task.getResult());
+                    onUploadSucess(task.getResult());
                 } else {
-                    mCallback.onBackupError(task.getException());
+                    onBackupError(task.getException());
                 }
             }
         });
@@ -478,6 +478,18 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
                 Log.d(getContext().getString(R.string.app_name), " Arquivo de backup \"" + backup.getName() + "\" excluído!");
             }
         }
+    }
+
+    protected void onBackupSuccess(File backupFile) {
+        mCallback.onBackupSuccess(backupFile);
+    }
+
+    protected void onUploadSucess(Uri backupUrl) {
+        mCallback.onUploadSucess(backupUrl);
+    }
+
+    protected void onBackupError(Exception error) {
+        mCallback.onBackupError(error);
     }
 
 }
