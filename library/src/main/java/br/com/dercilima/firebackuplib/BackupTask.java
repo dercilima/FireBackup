@@ -3,7 +3,6 @@ package br.com.dercilima.firebackuplib;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -21,7 +20,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -32,7 +30,7 @@ import java.util.Locale;
 import br.com.dercilima.firebackuplib.utils.FileUtil;
 import br.com.dercilima.zipfileslib.ZipFiles;
 
-public class BackupTask extends AsyncTask<Void, Exception, File> {
+public class BackupTask extends BaseTask<Void, Exception, File> {
 
     public interface Callback {
         /**
@@ -57,7 +55,6 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         void onBackupError(Exception error);
     }
 
-    private WeakReference<Context> context;
     private Callback mCallback;
 
     // Diretório onde será armazenado os backups
@@ -89,7 +86,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
 
 
     public BackupTask(Context context) {
-        this.context = new WeakReference<>(context);
+        super(context);
     }
 
     @Override
@@ -345,10 +342,6 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
                 .child(getUploadPath() != null ? getUploadPath() : "")
                 // Nome do arquivo
                 .child(backup.getName());
-    }
-
-    protected Context getContext() {
-        return context.get();
     }
 
     /**
