@@ -337,7 +337,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
 
     }
 
-    private Context getContext() {
+    protected Context getContext() {
         return context.get();
     }
 
@@ -351,7 +351,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return this;
     }
 
-    private List<String> getDbList() {
+    protected List<String> getDbList() {
         return dbList;
     }
 
@@ -366,7 +366,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return this;
     }
 
-    private HashMap<String, SharedPreferences> getPreferencesList() {
+    protected HashMap<String, SharedPreferences> getPreferencesList() {
         return preferencesList;
     }
 
@@ -396,7 +396,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return this;
     }
 
-    private File getBackupDirectory() {
+    protected File getBackupDirectory() {
         if (backupDirectory == null) {
             backupDirectory = new File(Environment.getExternalStorageDirectory(), "Backups");
         }
@@ -408,11 +408,11 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return backupDirectory;
     }
 
-    private boolean isUploadToStorage() {
+    protected boolean isUploadToStorage() {
         return uploadToStorage;
     }
 
-    private String getUploadPath() {
+    protected String getUploadPath() {
         return uploadPath;
     }
 
@@ -431,7 +431,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return this;
     }
 
-    private boolean isDeleteBackupAfterUpload() {
+    protected boolean isDeleteBackupAfterUpload() {
         return deleteBackupAfterUpload;
     }
 
@@ -446,11 +446,11 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
         return this;
     }
 
-    private boolean isShortenUrlWithDynamicLink() {
+    protected boolean isShortenUrlWithDynamicLink() {
         return shortenUrlWithDynamicLink;
     }
 
-    private String getDynamicLinkDomain() {
+    protected String getDynamicLinkDomain() {
         return dynamicLinkDomain;
     }
 
