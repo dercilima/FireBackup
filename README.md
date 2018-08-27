@@ -8,7 +8,7 @@ Configure o **FireBackup** no seu projeto **Android** de forma simples e rápida
 
 ## Gradle
 
-    implementation 'com.github.dercilima:firebackup:0.0.1'
+    implementation 'com.github.dercilima:firebackup:0.0.2'
 
 ## Maven
 
