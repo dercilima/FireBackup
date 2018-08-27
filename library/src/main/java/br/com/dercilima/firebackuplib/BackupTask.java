@@ -273,13 +273,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
     private void uploadBackup(final File backup) {
 
         // Obter uma referência do storage do firebase
-        final StorageReference backupRef = FirebaseStorage.getInstance()
-                // Obter uma referência do Storage
-                .getReference()
-                // Indicar o caminho onde será armazenado o arquivo de backup
-                .child(getUploadPath() != null ? getUploadPath() : "")
-                // Nome do arquivo
-                .child(backup.getName());
+        final StorageReference backupRef = getBackupStorageReference(backup);
 
         // Adicionar um timeout de 5 segundos
         backupRef.getStorage().setMaxUploadRetryTimeMillis(5000);
@@ -310,15 +304,15 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
                             .buildShortDynamicLink(ShortDynamicLink.Suffix.SHORT);
                 }
             })
-            .continueWith(new Continuation<ShortDynamicLink, Uri>() {
-                @Override
-                public Uri then(@NonNull Task<ShortDynamicLink> task) throws Exception {
-                    if (!task.isSuccessful() && task.getException() != null) {
-                        throw task.getException();
-                    }
-                    return task.getResult().getShortLink();
-                }
-            });
+                    .continueWith(new Continuation<ShortDynamicLink, Uri>() {
+                        @Override
+                        public Uri then(@NonNull Task<ShortDynamicLink> task) throws Exception {
+                            if (!task.isSuccessful() && task.getException() != null) {
+                                throw task.getException();
+                            }
+                            return task.getResult().getShortLink();
+                        }
+                    });
         }
 
         task.addOnCompleteListener(new OnCompleteListener<Uri>() {
@@ -335,6 +329,22 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
             }
         });
 
+    }
+
+    /**
+     * Retorna uma referência do caminho do arquivo no Firebase Storage
+     *
+     * @param backup
+     * @return
+     */
+    protected StorageReference getBackupStorageReference(final File backup) {
+        return FirebaseStorage.getInstance()
+                // Obter uma referência do Storage
+                .getReference()
+                // Indicar o caminho onde será armazenado o arquivo de backup
+                .child(getUploadPath() != null ? getUploadPath() : "")
+                // Nome do arquivo
+                .child(backup.getName());
     }
 
     protected Context getContext() {
@@ -423,7 +433,7 @@ public class BackupTask extends AsyncTask<Void, Exception, File> {
      * Lembrando que é necessário ter configurado as permissões no Storage do Firebase.
      *
      * @param uploadToStorage Flag indicativa
-     * @param uploadPath Caminho onde o arquivo será armazenado no Firebase Storage
+     * @param uploadPath      Caminho onde o arquivo será armazenado no Firebase Storage
      */
     public BackupTask setUploadToStorage(boolean uploadToStorage, String uploadPath) {
         this.uploadToStorage = uploadToStorage;
