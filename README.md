@@ -8,14 +8,14 @@ Configure o **FireBackup** no seu projeto **Android** de forma simples e rápida
 
 ## Gradle
 
-    implementation 'com.github.dercilima:firebackup:0.0.2'
+    implementation 'com.github.dercilima:firebackup:0.0.3'
 
 ## Maven
 
     <dependency>
         <groupId>com.github.dercilima</groupId>
         <artifactId>zipfiles</artifactId>
-        <version>0.0.1</version>
+        <version>0.0.3</version>
     </dependency>
 
 ## Como usar o FireBackup?
@@ -26,7 +26,7 @@ O **FireBackup** foi projetado para ser flexível e te atender da melhor forma p
 
 Se tratando de uma lib que fará a leitura e escrita de arquivos dentro do device Android, então, é necessário adicionar duas **permissões essenciais** no seu *AndroidManifest*, que são elas:
 
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>  
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
 Caso você resolva configurar para fazer upload do backup para o Storage do Firebase, então, é necessário permitir o app acessar a internet. Para isso, adicione a seguinte permissão:
@@ -37,10 +37,10 @@ Caso você resolva configurar para fazer upload do backup para o Storage do Fire
 
 Essa é a forma mais simples de se fazer o backup dos dados. Podemos usar a classe *BackupTask* para esse procedimento. Conforme exemplo abaixo:
 
-    new BackupTask(this)  
-            .setCallback(this)  
-            .addDatabaseName(DbHelper.DATABASE_NAME)  
-            .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())  
+    new BackupTask(this)
+            .setCallback(this)
+            .addDatabaseName(DbHelper.DATABASE_NAME)
+            .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
             .execute((Void) null);
 
 Com esse simples código acima, você consegue facilmente fazer o backup do seu banco de dados e do seu arquivo de preferências. Mas bem, o que significa cada chamada de método? Não se preocupe, é bem simples!
@@ -58,11 +58,11 @@ Com esse simples código acima, você consegue facilmente fazer o backup do seu 
 Opcionalmente, você também pode configurar o nome e o caminho onde será armazenado o arquivo de backup no device, usando os métodos **setBackupName()** e **setBackupDirectory()**. Por padrão, os arquivos de backup são armazenados dentro de uma pasta chamada *Backups* na raiz do *External Storage* do dispositivo. Veja a seguir:
 
     new BackupTask(this)  
-            .setCallback(this)  
-            .setBackupName("MeuBackup")  
-            .setBackupDirectory(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))  
-            .addDatabaseName(DbHelper.DATABASE_NAME)  
-            .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())  
+            .setCallback(this)
+            .setBackupName("MeuBackup")
+            .setBackupDirectory(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
+            .addDatabaseName(DbHelper.DATABASE_NAME)
+            .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
             .execute((Void) null);
 
 A chamada dos métodos acima fará com que o backup seja salvo em uma pasta com o nome do projeto (R.string.app_name), na raiz do *External Storage* com o nome *MeuBackup.zip*. Visto que não foi informado a extensão do arquivo, mas, por padrão, a extensão ".zip" já é adicionada automaticamente. Mas, fique a vontade para colocar sua extensão (.zip ou .rar), ambas funcionam bem.
