@@ -337,13 +337,16 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
      * @return
      */
     protected StorageReference getBackupStorageReference(final File backup) {
-        return FirebaseStorage.getInstance()
-                // Obter uma referência do Storage
-                .getReference()
-                // Indicar o caminho onde será armazenado o arquivo de backup
-                .child(getUploadPath() != null ? getUploadPath() : "")
-                // Nome do arquivo
-                .child(backup.getName());
+        // Obter uma referência do Storage
+        StorageReference storage = FirebaseStorage.getInstance().getReference();
+
+        if (getUploadPath() != null && !getUploadPath().trim().isEmpty()) {
+            // Indicar o caminho onde será armazenado o arquivo de backup
+            storage = storage.child(getUploadPath());
+        }
+
+        // Nome do arquivo
+        return storage.child(backup.getName());
     }
 
     /**

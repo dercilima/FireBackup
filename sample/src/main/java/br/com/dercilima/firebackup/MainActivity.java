@@ -40,10 +40,10 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
                 new BackupTask(this)
                         .setCallback(this)
                         .setBackupDirectory(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
-//                        .setBackupName("MeuBackup")
+                        .setBackupName("MeuBackup")
                         .addDatabaseName(DbHelper.DATABASE_NAME)
                         .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
-                        .setUploadToStorage(true, "/bktop/")
+                        .setUploadToStorage(true, "backups")
                         .setDeleteBackupAfterUpload(true)
                         .setShortenUrlWithDynamicLink(true, "firebackup.page.link")
                         .execute((Void) null);
