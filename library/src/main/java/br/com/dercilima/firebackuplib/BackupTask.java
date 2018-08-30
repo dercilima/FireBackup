@@ -233,7 +233,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     }
 
     private File getFilePreferences(String fileName) {
-        return new File(getPreferencesDir(), fileName + ".xml");
+        return new File(getPreferencesDir(), (fileName.endsWith(".xml") ? fileName : fileName + ".xml"));
     }
 
     private File getTempFileDatabase(String databaseName) {
