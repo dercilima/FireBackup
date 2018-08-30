@@ -8,14 +8,14 @@ Configure o **FireBackup** no seu projeto **Android** de forma simples e rápida
 
 ## Gradle
 
-    implementation 'com.github.dercilima:firebackup:0.0.5'
+    implementation 'com.github.dercilima:firebackup:0.0.6'
 
 ## Maven
 
     <dependency>
         <groupId>com.github.dercilima</groupId>
         <artifactId>zipfiles</artifactId>
-        <version>0.0.5</version>
+        <version>0.0.6</version>
     </dependency>
 
 ## Como usar o FireBackup?
@@ -62,7 +62,7 @@ Opcionalmente, você também pode configurar o nome e o caminho onde será armaz
             .setBackupName("MeuBackup")
             .setBackupDirectory(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
             .addDatabaseName(DbHelper.DATABASE_NAME)
-            .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
+            .addPreferenceName(Preferences.PREFERENCES_NAME)
             .execute((Void) null);
 
 A chamada dos métodos acima fará com que o backup seja salvo em uma pasta com o nome do projeto (R.string.app_name), na raiz do *External Storage* com o nome *MeuBackup.zip*. Visto que não foi informado a extensão do arquivo, mas, por padrão, a extensão ".zip" já é adicionada automaticamente. Mas, fique a vontade para colocar sua extensão (.zip ou .rar), ambas funcionam bem.
