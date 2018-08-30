@@ -1,7 +1,6 @@
 package br.com.dercilima.firebackuplib;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Environment;
 import android.support.annotation.NonNull;
@@ -23,7 +22,6 @@ import java.io.ObjectOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -66,7 +64,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     private String backupName;
 
     // Preferências para backup
-    private final HashMap<String, SharedPreferences> preferencesList = new HashMap<>();
+    private final Set<String> preferencesList = new HashSet<>();
 
     // Bancos de dados para backup
     private final Set<String> dbList = new HashSet<>();
@@ -141,7 +139,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         final List<File> files = new ArrayList<>();
 
         // Adicionar os arquivos de preferências
-        for (String key : getPreferencesList().keySet()) {
+        for (String key : getPreferencesList()) {
             files.add(getTempFilePreferences(key));
         }
 
@@ -202,14 +200,14 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         // arquivo de preferência diretamente, pois o android não lê o arquivo
         // quando restaura o backup
 
-        for (String key : getPreferencesList().keySet()) {
+        for (String preferenceName : getPreferencesList()) {
 
             ObjectOutputStream oos = null;
 
             try {
 
-                oos = new ObjectOutputStream(new FileOutputStream(getTempFilePreferences(key)));
-                oos.writeObject(getPreferencesList().get(key).getAll());
+                oos = new ObjectOutputStream(new FileOutputStream(getTempFilePreferences(preferenceName)));
+                oos.writeObject(getContext().getSharedPreferences(preferenceName, Context.MODE_PRIVATE).getAll());
 
             } finally {
 
@@ -271,62 +269,68 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
 
     private void uploadBackup(final File backup) {
 
-        // Obter uma referência do storage do firebase
-        final StorageReference backupRef = getBackupStorageReference(backup);
+        try {
 
-        // Adicionar um timeout de 5 segundos
-        backupRef.getStorage().setMaxUploadRetryTimeMillis(5000);
+            // Obter uma referência do storage do firebase
+            final StorageReference backupRef = getBackupStorageReference(backup);
 
-        // Fazer o backup
-        Task<Uri> task = backupRef.putFile(Uri.fromFile(backup))
-                .continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
-                    @Override
-                    public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
-                        if (!task.isSuccessful() && task.getException() != null) {
-                            throw task.getException();
-                        }
-                        return backupRef.getDownloadUrl();
-                    }
-                });
+            // Adicionar um timeout de 5 segundos
+            backupRef.getStorage().setMaxUploadRetryTimeMillis(5000);
 
-        // Verificar se está configurado para encurtar a url
-        if (isShortenUrlWithDynamicLink()) {
-            task = task.continueWithTask(new Continuation<Uri, Task<ShortDynamicLink>>() {
-                @Override
-                public Task<ShortDynamicLink> then(@NonNull Task<Uri> task) throws Exception {
-                    if (!task.isSuccessful() && task.getException() != null) {
-                        throw task.getException();
-                    }
-                    return FirebaseDynamicLinks.getInstance().createDynamicLink()
-                            .setLink(task.getResult())
-                            .setDynamicLinkDomain(getDynamicLinkDomain())
-                            .buildShortDynamicLink(ShortDynamicLink.Suffix.SHORT);
-                }
-            })
-                    .continueWith(new Continuation<ShortDynamicLink, Uri>() {
+            // Fazer o backup
+            Task<Uri> task = backupRef.putFile(Uri.fromFile(backup))
+                    .continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
                         @Override
-                        public Uri then(@NonNull Task<ShortDynamicLink> task) throws Exception {
+                        public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
                             if (!task.isSuccessful() && task.getException() != null) {
                                 throw task.getException();
                             }
-                            return task.getResult().getShortLink();
+                            return backupRef.getDownloadUrl();
                         }
                     });
-        }
 
-        task.addOnCompleteListener(new OnCompleteListener<Uri>() {
-            @Override
-            public void onComplete(@NonNull Task<Uri> task) {
-                if (isDeleteBackupAfterUpload()) {
-                    deleteBackupsLocal();
-                }
-                if (task.isSuccessful()) {
-                    onUploadSucess(task.getResult());
-                } else {
-                    onBackupError(task.getException());
-                }
+            // Verificar se está configurado para encurtar a url
+            if (isShortenUrlWithDynamicLink()) {
+                task = task.continueWithTask(new Continuation<Uri, Task<ShortDynamicLink>>() {
+                    @Override
+                    public Task<ShortDynamicLink> then(@NonNull Task<Uri> task) throws Exception {
+                        if (!task.isSuccessful() && task.getException() != null) {
+                            throw task.getException();
+                        }
+                        return FirebaseDynamicLinks.getInstance().createDynamicLink()
+                                .setLink(task.getResult())
+                                .setDynamicLinkDomain(getDynamicLinkDomain())
+                                .buildShortDynamicLink(ShortDynamicLink.Suffix.SHORT);
+                    }
+                })
+                        .continueWith(new Continuation<ShortDynamicLink, Uri>() {
+                            @Override
+                            public Uri then(@NonNull Task<ShortDynamicLink> task) throws Exception {
+                                if (!task.isSuccessful() && task.getException() != null) {
+                                    throw task.getException();
+                                }
+                                return task.getResult().getShortLink();
+                            }
+                        });
             }
-        });
+
+            task.addOnCompleteListener(new OnCompleteListener<Uri>() {
+                @Override
+                public void onComplete(@NonNull Task<Uri> task) {
+                    if (isDeleteBackupAfterUpload()) {
+                        deleteBackupsLocal();
+                    }
+                    if (task.isSuccessful()) {
+                        onUploadSucess(task.getResult());
+                    } else {
+                        onBackupError(task.getException());
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            onBackupError(e);
+        }
 
     }
 
@@ -334,7 +338,6 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
      * Retorna uma referência do caminho do arquivo no Firebase Storage
      *
      * @param backup
-     * @return
      */
     protected StorageReference getBackupStorageReference(final File backup) {
         // Obter uma referência do Storage
@@ -367,14 +370,13 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
      * Adiciona o nome do arquivo de preferências para backup. Pode adicionar vários arquivos.
      *
      * @param name  Nome do arquivo de preferências
-     * @param prefs SharedPreferences que gerencia a preferência cujo nome foi informado
      */
-    public BackupTask addPreferences(String name, SharedPreferences prefs) {
-        this.preferencesList.put(name, prefs);
+    public BackupTask addPreferenceName(String name) {
+        this.preferencesList.add(name);
         return this;
     }
 
-    protected HashMap<String, SharedPreferences> getPreferencesList() {
+    protected Set<String> getPreferencesList() {
         return preferencesList;
     }
 

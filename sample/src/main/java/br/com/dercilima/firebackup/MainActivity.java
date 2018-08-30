@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
                         .setBackupDirectory(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
                         .setBackupName("MeuBackup")
                         .addDatabaseName(DbHelper.DATABASE_NAME)
-                        .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
+                        .addPreferenceName(Preferences.PREFERENCES_NAME)
                         .setUploadToStorage(true, "backups")
                         .setDeleteBackupAfterUpload(true)
                         .setShortenUrlWithDynamicLink(true, "firebackup.page.link")
@@ -56,7 +56,7 @@ public class MainActivity extends AppCompatActivity implements BackupTask.Callba
                         .setCallback(this)
                         .setRestoreDir(new File(Environment.getExternalStorageDirectory(), getString(R.string.app_name)))
                         .addDatabaseName(DbHelper.DATABASE_NAME)
-                        .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
+                        .addPreferenceName(Preferences.PREFERENCES_NAME)
                         .execute();
 
                 break;
