@@ -343,7 +343,7 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
     private void restartTask(File file) {
         final RestoreBackupTask task = new RestoreBackupTask(getContext());
         task.setCallback(mCallback);
-        task.setRestoreDir(restoreDir);
+        task.setRestoreDir(getRestoreDir());
         for (String preferencesName : getPreferencesList()) {
             task.addPreferenceName(preferencesName);
         }
@@ -385,11 +385,13 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
      * @param restoreDir
      */
     public RestoreBackupTask setRestoreDir(File restoreDir) {
-        if (restoreDir != null && restoreDir.isDirectory()) {
-            this.restoreDir = restoreDir;
-        } else {
+        if (restoreDir == null) {
+            throw new IllegalArgumentException("Restore Directory precisa ser informado!");
+        }
+        if (!restoreDir.isDirectory()) {
             throw new IllegalArgumentException("Restore Directory precisa ser um diretório!");
         }
+        this.restoreDir = restoreDir;
         return this;
     }
 
