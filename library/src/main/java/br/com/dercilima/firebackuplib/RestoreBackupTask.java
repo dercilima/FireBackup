@@ -16,7 +16,6 @@ import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,7 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
     private File restoreDir;
 
     // Map de preferências. Pode-se ter n arquivos de preferências para restaurar
-    private final Map<String, SharedPreferences> preferencesList = new HashMap<>();
+    private final Set<String> preferencesList = new HashSet<>();
 
     // Nome do arquivo de banco de dados
     private final Set<String> dbList = new HashSet<>();
@@ -183,9 +182,9 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
             return;
         }
 
-        for (String preferencesName : getPreferencesList().keySet()) {
+        for (String preferenceName : getPreferencesList()) {
 
-            final File filePrefs = new File(getTempDir(), preferencesName + ".xml");
+            final File filePrefs = new File(getTempDir(), preferenceName + ".xml");
 
             if (!filePrefs.exists()) {
                 throw new FileNotFoundException(getContext().getString(R.string.msg_arquivo_prefs_not_found));
@@ -194,7 +193,7 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
 
                 // O restore do arquivo de configuração não é feito por meio de copia de arquivo.
                 // O arquivo é exportado em forma de key/value e importado da mesma forma.
-                loadSharedPreferencesFromFile(filePrefs, getPreferencesList().get(preferencesName));
+                loadSharedPreferencesFromFile(filePrefs, getContext().getSharedPreferences(preferenceName, Context.MODE_PRIVATE));
 
             }
 
@@ -345,8 +344,8 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
         final RestoreBackupTask task = new RestoreBackupTask(getContext());
         task.setCallback(mCallback);
         task.setRestoreDir(restoreDir);
-        for (String preferencesName : getPreferencesList().keySet()) {
-            task.addPreferences(preferencesName, getPreferencesList().get(preferencesName));
+        for (String preferencesName : getPreferencesList()) {
+            task.addPreferenceName(preferencesName);
         }
         for (String databaseName : getDbList()) {
             task.addDatabaseName(databaseName);
@@ -394,19 +393,17 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
         return this;
     }
 
-    protected Map<String, SharedPreferences> getPreferencesList() {
+    protected Set<String> getPreferencesList() {
         return this.preferencesList;
     }
 
     /**
-     * Adiciona o nome do arquivo de preferências e uma instancia da classe
-     * que gerencia essas preferências. Pode-se ter vários arquivos.
+     * Adiciona o nome do arquivo de preferências. Pode-se ter vários arquivos.
      *
-     * @param preferencesName
-     * @param preferences
+     * @param preferenceName
      */
-    public RestoreBackupTask addPreferences(String preferencesName, SharedPreferences preferences) {
-        this.preferencesList.put(preferencesName, preferences);
+    public RestoreBackupTask addPreferenceName(String preferenceName) {
+        this.preferencesList.add(preferenceName);
         return this;
     }
 
