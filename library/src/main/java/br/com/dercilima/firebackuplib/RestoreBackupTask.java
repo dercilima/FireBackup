@@ -280,10 +280,7 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
     private void copyDatabase(File fileDatabase) throws IOException {
 
         // Criar o path de databases caso não exista
-        final File dest = new File(getContext().getFilesDir(), "../databases");
-        if (!dest.exists() && dest.mkdirs()) {
-            Log.i(getClass().getSimpleName(), "Diretório \"" + dest + "\" criado!");
-        }
+        final File dest = getDatabasesDir();
 
         Log.d(getClass().getSimpleName(), "copyDatabase: from=[" + fileDatabase + "] to=[" + dest + "]");
 

@@ -24,8 +24,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import br.com.dercilima.firebackuplib.utils.FileUtil;
 import br.com.dercilima.zipfileslib.ZipFiles;
@@ -67,7 +69,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     private final HashMap<String, SharedPreferences> preferencesList = new HashMap<>();
 
     // Bancos de dados para backup
-    private final List<String> dbList = new ArrayList<>();
+    private final Set<String> dbList = new HashSet<>();
 
     // Indica se faz upload do backup para o Firebase Storage
     private boolean uploadToStorage = false;
@@ -233,7 +235,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     }
 
     private File getFilePreferences(String fileName) {
-        return new File(getContext().getFilesDir(), "../shared_prefs/" + fileName + ".xml");
+        return new File(getPreferencesDir(), fileName + ".xml");
     }
 
     private File getTempFileDatabase(String databaseName) {
@@ -354,7 +356,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         return this;
     }
 
-    protected List<String> getDbList() {
+    protected Set<String> getDbList() {
         return dbList;
     }
 
@@ -403,11 +405,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         if (backupDirectory == null) {
             backupDirectory = new File(Environment.getExternalStorageDirectory(), "Backups");
         }
-        if (!backupDirectory.exists()) {
-            if (backupDirectory.mkdirs()) {
-                Log.d(getClass().getSimpleName(), "Directory \"" + backupDirectory + "\" created!");
-            }
-        }
+        checkIfExists(backupDirectory);
         return backupDirectory;
     }
 

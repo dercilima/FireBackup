@@ -8,14 +8,14 @@ Configure o **FireBackup** no seu projeto **Android** de forma simples e rápida
 
 ## Gradle
 
-    implementation 'com.github.dercilima:firebackup:0.0.4'
+    implementation 'com.github.dercilima:firebackup:0.0.5'
 
 ## Maven
 
     <dependency>
         <groupId>com.github.dercilima</groupId>
         <artifactId>zipfiles</artifactId>
-        <version>0.0.4</version>
+        <version>0.0.5</version>
     </dependency>
 
 ## Como usar o FireBackup?
