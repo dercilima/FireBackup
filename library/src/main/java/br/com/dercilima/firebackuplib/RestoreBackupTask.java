@@ -39,11 +39,6 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
     // Diretório onde buscará os backups para fazer o restore
     private File restoreDir;
 
-    // Map de preferências. Pode-se ter n arquivos de preferências para restaurar
-    private final Set<String> preferencesList = new HashSet<>();
-
-    // Nome do arquivo de banco de dados
-    private final Set<String> dbList = new HashSet<>();
 
     public RestoreBackupTask(Context context) {
         super(context);
@@ -129,41 +124,9 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
         new ZipFiles(fileZip, getTempDir()).unzip();
     }
 
-    private void createTempDir() {
-
-        // Remover a pasta temp caso existir
-        deleteTempDir();
-
-        // Criar a pasta vazia
-        if (getTempDir().mkdirs()) {
-            Log.i(getClass().getSimpleName(), "Diretório \"" + getTempDir() + "\" criado!");
-        }
-
-    }
-
-    private File getTempDir() {
+    @Override
+    protected File getTempDir() {
         return new File(getRestoreDir(), "temp");
-    }
-
-    private void deleteTempDir() {
-
-        final File tempDir = getTempDir();
-
-        if (tempDir.exists()) {
-
-            // Deletar todos os arquivos que estão dentro da pasta temp
-            for (File f : tempDir.listFiles()) {
-                if (f.delete()) {
-                    Log.i(getClass().getSimpleName(), "Arquivo \"" + f + "\" excluído!");
-                }
-            }
-
-            // Deletar o diretório
-            if (tempDir.delete()) {
-                Log.i(getClass().getSimpleName(), "Diretório \"" + tempDir + "\" excluído!");
-            }
-        }
-
     }
 
     private void copyFiles() throws IOException {
@@ -439,22 +402,14 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
         return this;
     }
 
-    protected Set<String> getPreferencesList() {
-        return this.preferencesList;
-    }
-
     /**
      * Adiciona o nome do arquivo de preferências. Pode-se ter vários arquivos.
      *
      * @param preferenceName
      */
     public RestoreBackupTask addPreferenceName(String preferenceName) {
-        this.preferencesList.add(preferenceName);
+        getPreferencesList().add(preferenceName);
         return this;
-    }
-
-    protected Set<String> getDbList() {
-        return dbList;
     }
 
     /**
@@ -463,7 +418,7 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
      * @param databaseName
      */
     public RestoreBackupTask addDatabaseName(String databaseName) {
-        this.dbList.add(databaseName);
+        getDbList().add(databaseName);
         return this;
     }
 
