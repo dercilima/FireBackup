@@ -40,7 +40,7 @@ Essa é a forma mais simples de se fazer o backup dos dados. Podemos usar a clas
     new BackupTask(this)
             .setCallback(this)
             .addDatabaseName(DbHelper.DATABASE_NAME)
-            .addPreferences(Preferences.PREFERENCES_NAME, new Preferences(this).getPreferences())
+            .addPreferenceName(Preferences.PREFERENCES_NAME)
             .execute((Void) null);
 
 Com esse simples código acima, você consegue facilmente fazer o backup do seu banco de dados e do seu arquivo de preferências. Mas bem, o que significa cada chamada de método? Não se preocupe, é bem simples!
