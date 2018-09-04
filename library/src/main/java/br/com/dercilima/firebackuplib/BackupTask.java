@@ -22,10 +22,8 @@ import java.io.ObjectOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 
 import br.com.dercilima.firebackuplib.utils.FileUtil;
 import br.com.dercilima.zipfileslib.ZipFiles;
@@ -63,12 +61,6 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
     // Nome do arquivo de backup. Ex.: "MeuBackup" resultará em um arquivo "MeuBackup.zip"
     private String backupName;
 
-    // Preferências para backup
-    private final Set<String> preferencesList = new HashSet<>();
-
-    // Bancos de dados para backup
-    private final Set<String> dbList = new HashSet<>();
-
     // Indica se faz upload do backup para o Firebase Storage
     private boolean uploadToStorage = false;
 
@@ -95,7 +87,7 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         try {
 
             // Criar uma pasta tmp para salvar os arquivos, para compactar todos juntos
-            createTempDirectory();
+            createTempDir();
 
             // Copiar os arquivos para a pasta temp
             copyFiles();
@@ -149,41 +141,6 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         }
 
         return files;
-    }
-
-    private void deleteTempDir() {
-
-        final File tempDir = getTempDir();
-
-        if (tempDir.exists()) {
-
-            // Deletar todos os arquivos que estão dentro da pasta temp
-            for (File f : tempDir.listFiles()) {
-                if (f.delete()) {
-                    Log.i(getContext().getString(R.string.app_name), "Arquivo \"" + f + "\" excluído!");
-                }
-            }
-
-            // Deletar o diretório
-            if (tempDir.delete()) {
-                Log.i(getContext().getString(R.string.app_name), "Diretório \"" + tempDir + "\" excluído!");
-            }
-        }
-
-    }
-
-    private void createTempDirectory() {
-
-        final File tempDir = getTempDir();
-
-        // Se existir, apaga
-        deleteTempDir();
-
-        // Criar diretório vazio
-        if (tempDir.mkdirs()) {
-            Log.i(getContext().getString(R.string.app_name), "Diretório \"" + tempDir + "\" criado!");
-        }
-
     }
 
     private void copyFiles() throws IOException {
@@ -240,7 +197,8 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
         return new File(getTempDir(), getFileDatabase(databaseName).getName());
     }
 
-    private File getTempDir() {
+    @Override
+    protected File getTempDir() {
         return new File(getBackupDirectory(), "temp");
     }
 
@@ -358,12 +316,8 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
      * @param databaseName Nome do banco de dados para backup
      */
     public BackupTask addDatabaseName(String databaseName) {
-        dbList.add(databaseName);
+        getDbList().add(databaseName);
         return this;
-    }
-
-    protected Set<String> getDbList() {
-        return dbList;
     }
 
     /**
@@ -372,12 +326,8 @@ public class BackupTask extends BaseTask<Void, Exception, File> {
      * @param name  Nome do arquivo de preferências
      */
     public BackupTask addPreferenceName(String name) {
-        this.preferencesList.add(name);
+        getPreferencesList().add(name);
         return this;
-    }
-
-    protected Set<String> getPreferencesList() {
-        return preferencesList;
     }
 
     public BackupTask setCallback(Callback callback) {

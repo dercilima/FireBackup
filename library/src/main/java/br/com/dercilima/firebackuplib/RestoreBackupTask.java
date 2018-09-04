@@ -39,11 +39,6 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
     // Diretório onde buscará os backups para fazer o restore
     private File restoreDir;
 
-    // Map de preferências. Pode-se ter n arquivos de preferências para restaurar
-    private final Set<String> preferencesList = new HashSet<>();
-
-    // Nome do arquivo de banco de dados
-    private final Set<String> dbList = new HashSet<>();
 
     public RestoreBackupTask(Context context) {
         super(context);
@@ -129,41 +124,9 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
         new ZipFiles(fileZip, getTempDir()).unzip();
     }
 
-    private void createTempDir() {
-
-        // Remover a pasta temp caso existir
-        deleteTempDir();
-
-        // Criar a pasta vazia
-        if (getTempDir().mkdirs()) {
-            Log.i(getClass().getSimpleName(), "Diretório \"" + getTempDir() + "\" criado!");
-        }
-
-    }
-
-    private File getTempDir() {
+    @Override
+    protected File getTempDir() {
         return new File(getRestoreDir(), "temp");
-    }
-
-    private void deleteTempDir() {
-
-        final File tempDir = getTempDir();
-
-        if (tempDir.exists()) {
-
-            // Deletar todos os arquivos que estão dentro da pasta temp
-            for (File f : tempDir.listFiles()) {
-                if (f.delete()) {
-                    Log.i(getClass().getSimpleName(), "Arquivo \"" + f + "\" excluído!");
-                }
-            }
-
-            // Deletar o diretório
-            if (tempDir.delete()) {
-                Log.i(getClass().getSimpleName(), "Diretório \"" + tempDir + "\" excluído!");
-            }
-        }
-
     }
 
     private void copyFiles() throws IOException {
@@ -184,16 +147,24 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
 
         for (String preferenceName : getPreferencesList()) {
 
-            final File filePrefs = new File(getTempDir(), preferenceName + ".xml");
+            // Se for uma expressão
+            if (preferenceName.contains("*")) {
 
-            if (!filePrefs.exists()) {
-                throw new FileNotFoundException(getContext().getString(R.string.msg_arquivo_prefs_not_found));
+                // Procurar os arquivos com a expressão
+                for (File prefsFound : findFiles(preferenceName)) {
+                    loadSharedPreferencesFromFile(prefsFound);
+                }
 
             } else {
 
-                // O restore do arquivo de configuração não é feito por meio de copia de arquivo.
-                // O arquivo é exportado em forma de key/value e importado da mesma forma.
-                loadSharedPreferencesFromFile(filePrefs, getContext().getSharedPreferences(preferenceName, Context.MODE_PRIVATE));
+                // Se for o nome do arquivo
+                final File filePrefs = new File(getTempDir(), preferenceName + (!preferenceName.endsWith(".xml") ? ".xml" : ""));
+
+                if (!filePrefs.exists()) {
+                    throw new FileNotFoundException(getContext().getString(R.string.msg_arquivo_prefs_not_found));
+                } else {
+                    loadSharedPreferencesFromFile(filePrefs);
+                }
 
             }
 
@@ -201,14 +172,20 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
 
     }
 
-    @SuppressWarnings("unchecked")
-    private void loadSharedPreferencesFromFile(File filePrefs, SharedPreferences preferences) {
+    // O restore do arquivo de configuração não é feito por meio de copia de arquivo.
+
+    // O arquivo é exportado em forma de key/value e importado da mesma forma.
+    private void loadSharedPreferencesFromFile(File filePrefs) {
 
         ObjectInputStream input = null;
 
         try {
 
             input = new ObjectInputStream(new FileInputStream(filePrefs));
+
+            String prefsName = filePrefs.getName();
+            prefsName = prefsName.substring(0, prefsName.indexOf(".xml"));
+            final SharedPreferences preferences = getContext().getSharedPreferences(prefsName, Context.MODE_PRIVATE);
 
             // Limpar o arquivo de preferências, caso tenha alguma preferência salva, será apagada
             preferences.edit().clear().apply();
@@ -218,7 +195,16 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
 
             for (Entry<String, ?> entry : entries.entrySet()) {
                 // Salvar a preferência
-                set(preferences, entry.getKey(), entry.getValue());
+                if (entry.getValue() instanceof Boolean)
+                    preferences.edit().putBoolean(entry.getKey(), (Boolean) entry.getValue()).apply();
+                else if (entry.getValue() instanceof Float)
+                    preferences.edit().putFloat(entry.getKey(), (Float) entry.getValue()).apply();
+                else if (entry.getValue() instanceof Integer)
+                    preferences.edit().putInt(entry.getKey(), (Integer) entry.getValue()).apply();
+                else if (entry.getValue() instanceof Long)
+                    preferences.edit().putLong(entry.getKey(), (Long) entry.getValue()).apply();
+                else if (entry.getValue() instanceof String)
+                    preferences.edit().putString(entry.getKey(), ((String) entry.getValue())).apply();
             }
 
         } catch (IOException | ClassNotFoundException e) {
@@ -233,33 +219,25 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
             }
         }
     }
-
-    private void set(SharedPreferences preferences, String key, Object value) {
-        if (value instanceof Boolean)
-            preferences.edit().putBoolean(key, (Boolean) value).apply();
-        else if (value instanceof Float)
-            preferences.edit().putFloat(key, (Float) value).apply();
-        else if (value instanceof Integer)
-            preferences.edit().putInt(key, (Integer) value).apply();
-        else if (value instanceof Long)
-            preferences.edit().putLong(key, (Long) value).apply();
-        else if (value instanceof String)
-            preferences.edit().putString(key, ((String) value)).apply();
-    }
-
     private void copyDatabase() throws IOException {
 
         if (!getDbList().isEmpty()) {
 
             for (String databaseName : getDbList()) {
 
-                final File fileDatabase = new File(getTempDir(), databaseName);
-
-                if (!fileDatabase.exists()) {
-                    throw new FileNotFoundException(getContext().getString(R.string.msg_arquivo_db_not_found));
+                // Verificar se o nome é uma expressão
+                if (databaseName.contains("*")) {
+                    // Encontra os arquivos que combinem com a expressão
+                    for (File found : findFiles(databaseName)) {
+                        copyDatabase(found);
+                    }
+                } else {
+                    final File fileDatabase = new File(getTempDir(), databaseName);
+                    if (!fileDatabase.exists()) {
+                        throw new FileNotFoundException(getContext().getString(R.string.msg_arquivo_db_not_found));
+                    }
+                    copyDatabase(fileDatabase);
                 }
-
-                copyDatabase(fileDatabase);
 
             }
 
@@ -285,6 +263,35 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
 
         // Copiar
         FileUtil.copyFile(getContext(), fileDatabase, new File(dest, fileDatabase.getName()), true);
+    }
+
+    private Set<File> findFiles(String expression) {
+        final Set<File> filesFound = new HashSet<>();
+
+        if (!expression.contains("*")) {
+            throw new IllegalArgumentException("Expressão mal formada!");
+        }
+
+        // Procurar por aquivos que combinem com a expressão
+        for (File f : getTempDir().listFiles()) {
+            if (f.isFile()) {
+                if (expression.startsWith("*") && expression.endsWith("*")) {
+                    if (f.getName().contains(expression.replace("*", ""))) {
+                        filesFound.add(f);
+                    }
+                } else if (expression.startsWith("*")) {
+                    if (f.getName().endsWith(expression.replace("*", ""))) {
+                        filesFound.add(f);
+                    }
+                } else if (expression.endsWith("*")) {
+                    if (f.getName().startsWith(expression.replace("*", ""))) {
+                        filesFound.add(f);
+                    }
+                }
+            }
+        }
+
+        return filesFound;
     }
 
     @Override
@@ -395,22 +402,14 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
         return this;
     }
 
-    protected Set<String> getPreferencesList() {
-        return this.preferencesList;
-    }
-
     /**
      * Adiciona o nome do arquivo de preferências. Pode-se ter vários arquivos.
      *
      * @param preferenceName
      */
     public RestoreBackupTask addPreferenceName(String preferenceName) {
-        this.preferencesList.add(preferenceName);
+        getPreferencesList().add(preferenceName);
         return this;
-    }
-
-    protected Set<String> getDbList() {
-        return dbList;
     }
 
     /**
@@ -419,10 +418,9 @@ public class RestoreBackupTask extends BaseTask<File, Exception, List<File>> {
      * @param databaseName
      */
     public RestoreBackupTask addDatabaseName(String databaseName) {
-        this.dbList.add(databaseName);
+        getDbList().add(databaseName);
         return this;
     }
-
 
 
 }
